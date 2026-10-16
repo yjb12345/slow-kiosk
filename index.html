@@ -1,0 +1,520 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>천천히 키오스크</title>
+<style>
+  :root {
+    --bg: #F4F1EA; --panel: #FFFFFF; --ink: #1F2A24; --muted: #5F6B65; --line: #DDD6C8;
+    --brand: #1F6F5C; --brand-ink: #FFFFFF; --accent: #F2A33A; --ok: #2E9E5B; --warn: #D9480F;
+    --kiosk: #20262B; --screen: #FFFFFF; --soft: #EEF5F1;
+    --fs: 18px;
+  }
+  body.big { --fs: 22px; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; min-height: 100%; background: var(--bg); color: var(--ink);
+    font-family: "Pretendard", "Malgun Gothic", "Apple SD Gothic Neo", sans-serif; font-size: var(--fs); }
+  button { font: inherit; cursor: pointer; }
+  .wrap { max-width: 1180px; margin: 0 auto; padding: 20px 16px 40px; }
+  header.top { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; margin-bottom: 18px; }
+  header.top h1 { margin: 0; font-size: 1.5em; }
+  header.top .sub { color: var(--muted); font-size: .8em; }
+  .spacer { flex: 1; }
+  .tog { border: 2px solid var(--line); background: #fff; border-radius: 999px; padding: 8px 16px; font-size: .8em; }
+  .tog.on { background: var(--brand); color: #fff; border-color: var(--brand); }
+
+  /* 홈 */
+  .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; }
+  .scn { background: var(--panel); border: 2px solid var(--line); border-radius: 20px; padding: 22px; text-align: left; }
+  .scn:hover { border-color: var(--brand); }
+  .scn .ico { font-size: 2.4em; }
+  .scn h2 { margin: 8px 0 4px; font-size: 1.15em; }
+  .scn p { margin: 0; color: var(--muted); font-size: .85em; line-height: 1.5; }
+  .scn .prog { margin-top: 12px; font-size: .8em; color: var(--brand); font-weight: 700; }
+  .scn[disabled] { opacity: .55; cursor: default; }
+  .levels { display: flex; gap: 8px; margin-top: 14px; flex-wrap: wrap; }
+  .lv { border: 2px solid var(--brand); color: var(--brand); background: #fff; border-radius: 12px; padding: 8px 14px; font-size: .8em; font-weight: 700; }
+  .lv:hover { background: var(--soft); }
+  .intro { background: var(--soft); border-radius: 16px; padding: 16px 18px; margin-bottom: 18px; line-height: 1.6; font-size: .9em; }
+
+  /* 플레이 */
+  .play { display: grid; grid-template-columns: 360px 1fr; gap: 22px; align-items: start; }
+  @media (max-width: 860px) { .play { grid-template-columns: 1fr; } }
+  .side { background: var(--panel); border-radius: 20px; padding: 18px; border: 2px solid var(--line); position: sticky; top: 12px; }
+  .side h3 { margin: 0 0 6px; font-size: .95em; color: var(--brand); }
+  .mission { font-size: 1.05em; font-weight: 700; line-height: 1.45; margin-bottom: 12px; }
+  .check { list-style: none; padding: 0; margin: 0 0 14px; font-size: .85em; }
+  .check li { padding: 6px 0; border-bottom: 1px dashed var(--line); display: flex; gap: 8px; }
+  .check li.done { color: var(--ok); }
+  .check li .b { width: 1.3em; text-align: center; }
+  .hint { background: #FFF6E5; border: 2px solid #F5D9A8; border-radius: 14px; padding: 12px 14px; font-size: .9em; line-height: 1.5; min-height: 64px; }
+  .hint.quiet { background: #F7F7F5; border-color: var(--line); color: var(--muted); }
+  .help { margin-top: 12px; width: 100%; border: 0; border-radius: 14px; padding: 14px; background: var(--accent); color: #1F2A24; font-weight: 800; font-size: 1em; }
+  .help.pulse { animation: pulse 1.2s infinite; }
+  .stats { display: flex; gap: 10px; margin-top: 12px; font-size: .78em; color: var(--muted); flex-wrap: wrap; }
+  .stats b { color: var(--ink); }
+  .quit { margin-top: 10px; background: none; border: 0; color: var(--muted); text-decoration: underline; font-size: .8em; }
+
+  .kiosk { background: var(--kiosk); border-radius: 34px; padding: 22px 18px 30px; max-width: 520px; margin: 0 auto; box-shadow: 0 14px 40px rgba(0,0,0,.25); }
+  .kiosk .cam { width: 60px; height: 8px; background: #3A434B; border-radius: 8px; margin: 0 auto 14px; }
+  .screen { background: var(--screen); border-radius: 16px; min-height: 640px; position: relative; overflow: hidden; display: flex; flex-direction: column; font-size: 16px; }
+  body.big .screen { font-size: 19px; }
+  .kiosk .slot { margin: 18px auto 0; width: 150px; height: 16px; border-radius: 6px; background: #0F1316; border: 2px solid #3A434B; }
+  .bar { background: var(--brand); color: #fff; padding: 14px 16px; font-weight: 800; display: flex; justify-content: space-between; align-items: center; }
+  .bar small { font-weight: 500; opacity: .85; }
+  .body { padding: 16px; flex: 1; display: flex; flex-direction: column; gap: 12px; }
+  .big-btn { border: 0; border-radius: 16px; padding: 26px 16px; font-size: 1.25em; font-weight: 800; background: var(--soft); color: var(--ink); }
+  .big-btn .e { display: block; font-size: 2em; margin-bottom: 6px; }
+  .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .tabs { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 4px; }
+  .tab { border: 0; background: #F0F0EC; border-radius: 999px; padding: 10px 16px; white-space: nowrap; font-weight: 700; }
+  .tab.on { background: var(--ink); color: #fff; }
+  .items { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .item { border: 2px solid #ECE8DF; background: #fff; border-radius: 14px; padding: 12px 10px; text-align: center; }
+  .item .e { font-size: 2.2em; display: block; }
+  .item .n { font-weight: 800; display: block; margin-top: 4px; }
+  .item .p { color: var(--muted); font-size: .85em; }
+  .cartbar { margin-top: auto; display: flex; gap: 10px; align-items: center; border-top: 2px solid #F0F0EC; padding-top: 12px; }
+  .cartbar .sum { flex: 1; font-size: .9em; }
+  .primary { border: 0; border-radius: 14px; padding: 16px 20px; background: var(--warn); color: #fff; font-weight: 800; font-size: 1.05em; }
+  .primary.alt { background: var(--brand); }
+  .ghost { border: 2px solid #D5D0C4; background: #fff; border-radius: 14px; padding: 14px 18px; font-weight: 700; }
+  .modal { position: absolute; inset: 0; background: rgba(20,24,22,.55); display: flex; align-items: center; justify-content: center; padding: 18px; }
+  .sheet { background: #fff; border-radius: 18px; padding: 18px; width: 100%; display: flex; flex-direction: column; gap: 12px; }
+  .sheet h4 { margin: 0; font-size: 1.15em; }
+  .opts { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
+  .opt { border: 2px solid #E5E0D5; background: #fff; border-radius: 12px; padding: 12px 6px; font-weight: 700; }
+  .opt.on { border-color: var(--brand); background: var(--soft); }
+  .list { border: 2px solid #F0F0EC; border-radius: 14px; padding: 12px; font-size: .95em; line-height: 1.7; }
+  .center { text-align: center; }
+  .huge { font-size: 3.2em; font-weight: 900; color: var(--brand); }
+  .keypad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .key { border: 0; background: #F0F0EC; border-radius: 12px; padding: 16px 0; font-size: 1.3em; font-weight: 800; }
+  .phone { font-size: 1.6em; font-weight: 800; letter-spacing: 2px; text-align: center; padding: 12px; border: 2px solid #E5E0D5; border-radius: 12px; min-height: 64px; }
+  .cardslot { margin: 10px auto; width: 220px; height: 140px; border-radius: 16px; border: 4px dashed #A9B4AE; display: flex; align-items: center; justify-content: center; font-size: 3em; background: #FAFAF8; }
+
+  .hint-glow { outline: 5px solid var(--accent) !important; outline-offset: 3px; animation: pulse 1s infinite; position: relative; z-index: 2; }
+  @keyframes pulse { 0%,100% { box-shadow: 0 0 0 0 rgba(242,163,58,.7); } 50% { box-shadow: 0 0 0 12px rgba(242,163,58,0); } }
+  .toast { position: absolute; left: 50%; bottom: 22px; transform: translateX(-50%); background: #1F2A24; color: #fff; padding: 12px 18px; border-radius: 14px; font-size: .95em; z-index: 5; max-width: 90%; text-align: center; }
+
+  /* 결과 */
+  .result { background: var(--panel); border-radius: 24px; padding: 28px; max-width: 760px; margin: 0 auto; border: 2px solid var(--line); }
+  .stars { font-size: 3em; letter-spacing: 6px; }
+  .grid3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin: 18px 0; }
+  .grid3 div { background: var(--soft); border-radius: 14px; padding: 14px; text-align: center; }
+  .grid3 b { display: block; font-size: 1.6em; color: var(--brand); }
+  .stuck { background: #FFF6E5; border-radius: 14px; padding: 14px 16px; line-height: 1.6; font-size: .9em; }
+  .actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 18px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div>
+      <h1>🐢 천천히 키오스크</h1>
+      <div class="sub">실수해도 괜찮은 키오스크 연습장 · 디지털 짝꿍</div>
+    </div>
+    <div class="spacer"></div>
+    <button class="tog" id="tBig">글씨 크게</button>
+    <button class="tog on" id="tVoice">음성 안내 켜짐</button>
+  </header>
+  <main id="app"></main>
+</div>
+
+<script>
+// ===================== 시나리오 =====================
+// 각 단계: screen(화면 이름), target(정답 버튼), label(결과표에 쓰는 이름), hint(도움말), check(미션 체크 항목 번호)
+// trap: true 인 단계는 '실전' 단계에서만 나오는 팝업(키오스크가 흔히 띄우는 선택 권유)
+const SCENARIOS = {
+  burger: {
+    title: "패스트푸드 주문", ico: "🍔", place: "오산버거 (가상 매장)",
+    desc: "포장 주문, 세트 선택, 음료 변경, 카드 결제까지",
+    mission: "불고기버거 세트 1개를 포장으로 주문하세요. 음료는 사이다로 바꾸고, 카드로 결제한 뒤 영수증은 받지 마세요.",
+    checks: ["포장 선택", "불고기버거 세트 담기", "음료를 사이다로", "카드로 결제", "영수증 받지 않기"],
+    steps: [
+      { screen: "attract", target: "start", label: "주문 시작", hint: "화면 아무 곳이나 한 번 눌러 주세요. 키오스크는 화면을 눌러야 시작돼요." },
+      { screen: "where", target: "takeout", label: "포장/매장 선택", hint: "가지고 가실 거니까 오른쪽 '포장해 갈게요'를 눌러 주세요.", check: 0 },
+      { screen: "menu", target: "tab-set", label: "메뉴 종류 고르기", hint: "위쪽 메뉴 종류 중에서 '세트'를 눌러 주세요. 세트는 버거·감자튀김·음료가 함께 나와요." },
+      { screen: "menu", target: "item-bulgogi", label: "메뉴 고르기", hint: "'불고기버거 세트' 그림을 눌러 주세요." },
+      { screen: "option", target: "drink-cider", label: "음료 바꾸기", hint: "기본 음료는 콜라예요. '사이다'를 눌러 바꿔 주세요.", check: 2 },
+      { screen: "option", target: "add", label: "장바구니 담기", hint: "아래 '담기' 버튼을 누르면 장바구니에 들어가요.", check: 1 },
+      { screen: "upsell", target: "up-no", label: "추가 권유 팝업", trap: true, hint: "사이즈를 키우라는 권유예요. 미션에 없으니 '아니요'를 눌러 주세요." },
+      { screen: "menu", target: "checkout", label: "주문하기", hint: "아래 빨간 '주문하기' 버튼을 눌러 주세요." },
+      { screen: "confirm", target: "pay", label: "주문 확인", hint: "주문 내용을 확인하고 '결제하기'를 눌러 주세요." },
+      { screen: "point", target: "pt-no", label: "포인트 적립 팝업", trap: true, hint: "포인트 적립은 선택이에요. '적립 안 함'을 눌러 넘어가 주세요." },
+      { screen: "paymethod", target: "pm-card", label: "결제 방법", hint: "'신용·체크카드'를 눌러 주세요.", check: 3 },
+      { screen: "insert", target: "insert", label: "카드 넣기", hint: "그림처럼 카드를 화면 아래 카드 투입구에 꽂아요. 연습에서는 카드 그림을 눌러 주세요." },
+      { screen: "receipt", target: "rc-no", label: "영수증", hint: "영수증은 받지 않기로 했어요. '출력 안 함'을 눌러 주세요.", check: 4 },
+      { screen: "done", target: null, label: "완료" },
+    ],
+  },
+  hospital: {
+    title: "병원 접수", ico: "🏥", place: "오산 가정의원 (가상 병원)",
+    desc: "재진 접수, 휴대폰 번호 본인 확인, 진료과 선택까지",
+    mission: "다시 온 환자로 접수하세요. 휴대폰 번호 010-1234-5678로 본인 확인을 하고, 정형외과를 선택하세요.",
+    phone: "01012345678",
+    checks: ["접수 선택", "재진(다시 왔어요) 선택", "휴대폰 번호로 본인 확인", "정형외과 선택", "접수 완료"],
+    steps: [
+      { screen: "h-home", target: "h-reg", label: "메뉴 고르기", hint: "진료를 받으러 오셨으니 '접수'를 눌러 주세요.", check: 0 },
+      { screen: "h-type", target: "h-revisit", label: "초진/재진", hint: "전에 와 본 병원이면 '다시 왔어요(재진)'를 눌러요.", check: 1 },
+      { screen: "h-id", target: "h-phone", label: "본인 확인 방법", hint: "'휴대폰 번호로 확인'을 눌러 주세요." },
+      { screen: "h-keypad", target: "keypad", label: "번호 입력", hint: "숫자를 하나씩 눌러 010-1234-5678을 입력해요. 틀리면 '지우기'를 누르면 돼요." },
+      { screen: "h-keypad", target: "h-ok", label: "번호 확인", hint: "번호를 다 넣었으면 '확인'을 눌러 주세요.", check: 2 },
+      { screen: "h-survey", target: "sv-skip", label: "문진표 팝업", trap: true, hint: "문진표는 선택이에요. '건너뛰기'를 눌러 주세요." },
+      { screen: "h-dept", target: "d-ortho", label: "진료과 선택", hint: "무릎·허리·뼈는 '정형외과'예요. 눌러 주세요.", check: 3 },
+      { screen: "h-confirm", target: "h-submit", label: "접수 확인", hint: "내용이 맞으면 '접수하기'를 눌러 주세요.", check: 4 },
+      { screen: "h-done", target: null, label: "완료" },
+    ],
+  },
+  civil: {
+    title: "무인민원발급기", ico: "🏛️", place: "행정복지센터 무인민원발급기 (가상)",
+    desc: "주민등록표 등본 발급: 주민등록번호 입력, 지문 인식, 수수료 결제",
+    mission: "주민등록표 등본 1통을 발급하세요. 연습용 주민등록번호 900101-1234567을 넣고 지문을 인식한 뒤, 과거 주소 변동 사항은 '미포함'으로 하고 카드로 수수료를 내세요.",
+    checks: ["주민등록표 등본 선택", "주민등록번호 입력", "지문 인식", "주소 변동 사항 미포함", "카드로 수수료 결제"],
+    steps: [
+      { screen: "c-home", target: "c-resident", label: "민원 종류", hint: "등본은 '주민등록' 서류예요. 맨 위 '주민등록'을 눌러 주세요." },
+      { screen: "c-kind", target: "c-deungbon", label: "서류 고르기", hint: "'주민등록표 등본'을 눌러 주세요. 초본과 헷갈리기 쉬우니 글자를 천천히 확인하세요.", check: 0 },
+      { screen: "c-rrn", target: "keypad", expect: "9001011234567", label: "주민등록번호 입력", hint: "숫자를 하나씩 눌러 900101-1234567을 넣어요. 가운데 줄(-)은 자동으로 들어가요." },
+      { screen: "c-rrn", target: "c-ok", expect: "9001011234567", label: "번호 확인", hint: "번호를 다 넣었으면 '확인'을 눌러 주세요.", check: 1 },
+      { screen: "c-finger", target: "finger", label: "지문 인식", hint: "화면 아래 지문 인식기에 손가락을 올리는 단계예요. 연습에서는 지문 그림을 눌러 주세요.", check: 2 },
+      { screen: "c-option", target: "addr-no", label: "발급 내용 선택", hint: "과거 주소 변동 사항은 '미포함'을 눌러 주세요.", check: 3 },
+      { screen: "c-option", target: "c-next", label: "다음", hint: "선택을 마쳤으면 아래 '다음'을 눌러 주세요." },
+      { screen: "c-more", target: "more-no", label: "추가 발급 팝업", trap: true, hint: "다른 서류는 필요 없어요. '아니요'를 눌러 주세요." },
+      { screen: "c-pay", target: "cpay-card", label: "수수료 결제 방법", hint: "'카드'를 눌러 주세요.", check: 4 },
+      { screen: "c-insert", target: "c-insert", label: "카드 넣기", hint: "카드를 투입구에 꽂는 단계예요. 연습에서는 카드 그림을 눌러 주세요." },
+      { screen: "c-done", target: null, label: "완료" },
+    ],
+  },
+};
+const LEVELS = [
+  { id: 1, name: "연습", desc: "다음에 누를 곳이 계속 반짝여요" },
+  { id: 2, name: "도전", desc: "막히면 도움말이 나와요" },
+  { id: 3, name: "실전", desc: "실제처럼 권유 팝업이 떠요 · 도움말은 버튼으로" },
+];
+const BURGERS = {
+  "추천": [["bulgogi-r", "🍔", "불고기버거", 4800], ["cheese-r", "🧀", "치즈버거", 4500]],
+  "버거": [["bulgogi-b", "🍔", "불고기버거", 4800], ["chicken-b", "🍗", "치킨버거", 5200], ["cheese-b", "🧀", "치즈버거", 4500], ["shrimp-b", "🦐", "새우버거", 5000]],
+  "세트": [["bulgogi", "🍔🍟", "불고기버거 세트", 7300], ["chicken", "🍗🍟", "치킨버거 세트", 7700], ["cheese", "🧀🍟", "치즈버거 세트", 7000], ["shrimp", "🦐🍟", "새우버거 세트", 7500]],
+  "음료": [["cola-d", "🥤", "콜라", 2000], ["cider-d", "🥤", "사이다", 2000], ["coffee-d", "☕", "커피", 2500]],
+  "디저트": [["icecream", "🍦", "아이스크림", 1500], ["pie", "🥧", "애플파이", 2000]],
+};
+const TABKEY = { "tab-rec": "추천", "tab-burger": "버거", "tab-set": "세트", "tab-drink": "음료", "tab-dessert": "디저트" };
+
+// ===================== 상태 =====================
+let S = null;           // 진행 중 게임
+let big = false, voice = true;
+const app = document.getElementById("app");
+const store = {
+  get() { try { return JSON.parse(localStorage.getItem("kiosk-progress") || "{}"); } catch (e) { return {}; } },
+  set(v) { try { localStorage.setItem("kiosk-progress", JSON.stringify(v)); } catch (e) {} },
+};
+
+function say(t) {
+  if (!voice || !("speechSynthesis" in window) || !t) return;
+  try { speechSynthesis.cancel(); const u = new SpeechSynthesisUtterance(t); u.lang = "ko-KR"; u.rate = 0.92; speechSynthesis.speak(u); } catch (e) {}
+}
+document.getElementById("tBig").onclick = e => { big = !big; document.body.classList.toggle("big", big); e.target.classList.toggle("on", big); e.target.textContent = big ? "글씨 크게 켜짐" : "글씨 크게"; };
+document.getElementById("tVoice").onclick = e => { voice = !voice; e.target.classList.toggle("on", voice); e.target.textContent = voice ? "음성 안내 켜짐" : "음성 안내 꺼짐"; if (!voice) try { speechSynthesis.cancel(); } catch (x) {} };
+
+// ===================== 홈 =====================
+function home() {
+  clearTimers(); S = null;
+  const prog = store.get();
+  app.innerHTML = `
+    <div class="intro">🐢 <b>천천히 해도, 틀려도 괜찮아요.</b> 실제 키오스크와 비슷한 화면에서 미션을 따라 연습해 보세요.
+    막히면 반짝이는 버튼과 음성으로 알려 드리고, 끝나면 어디서 막혔는지 알려 드려요.</div>
+    <div class="cards">${Object.entries(SCENARIOS).map(([id, s]) => s.soon
+      ? `<button class="scn" disabled><div class="ico">${s.ico}</div><h2>${s.title}</h2><p>${s.desc}</p></button>`
+      : `<div class="scn"><div class="ico">${s.ico}</div><h2>${s.title}</h2><p>${s.desc}</p>
+        <div class="prog">${prog[id] ? `최고 기록: ${LEVELS[prog[id].level - 1].name} 단계 ${"★".repeat(prog[id].stars)}` : "아직 도전 전"}</div>
+        <div class="levels">${LEVELS.map(l => `<button class="lv" data-s="${id}" data-l="${l.id}" title="${l.desc}">${l.id}. ${l.name}</button>`).join("")}</div></div>`).join("")}
+    </div>
+    <p class="sub" style="margin-top:18px;color:var(--muted);font-size:.8em">단계: ${LEVELS.map(l => `<b>${l.name}</b> ${l.desc}`).join(" · ")}</p>`;
+  app.querySelectorAll(".lv").forEach(b => b.onclick = () => start(b.dataset.s, +b.dataset.l));
+}
+
+// ===================== 진행 =====================
+let idleT = null, toastT = null;
+function clearTimers() { clearTimeout(idleT); clearTimeout(toastT); }
+
+function start(id, level) {
+  const sc = SCENARIOS[id];
+  S = { addr: null, id, sc, level, steps: sc.steps.filter(s => !s.trap || level === 3), i: 0, tab: "추천", drink: "콜라", cart: 0, typed: "",
+        mistakes: 0, hints: 0, consec: 0, t0: Date.now(), stepT0: Date.now(), log: [], done: new Set(), hintOn: level === 1 };
+  render();
+  say(sc.mission);
+}
+const step = () => S.steps[S.i];
+const code = () => step().expect || S.sc.phone || "";
+
+function render() {
+  const sc = S.sc, st = step();
+  app.innerHTML = `
+    <div class="play">
+      <aside class="side">
+        <h3>미션 · ${sc.place} · ${LEVELS[S.level - 1].name} 단계</h3>
+        <div class="mission">${sc.mission}</div>
+        <ul class="check">${sc.checks.map((c, k) => `<li class="${S.done.has(k) ? "done" : ""}"><span class="b">${S.done.has(k) ? "✅" : "⬜"}</span>${c}</li>`).join("")}</ul>
+        <div class="hint ${S.hintOn ? "" : "quiet"}" id="hint">${S.hintOn && st.hint ? "💡 " + st.hint : "막히면 아래 버튼을 눌러 주세요."}</div>
+        <button class="help" id="help">🙋 도와주세요</button>
+        <div class="stats"><span>실수 <b>${S.mistakes}</b></span><span>도움 <b>${S.hints}</b></span><span>단계 <b>${S.i + 1}/${S.steps.length}</b></span></div>
+        <button class="quit" id="quit">처음 화면으로</button>
+      </aside>
+      <section><div class="kiosk"><div class="cam"></div><div class="screen" id="screen">${screen(st)}</div><div class="slot"></div></div></section>
+    </div>`;
+  document.getElementById("help").onclick = () => showHint(true);
+  document.getElementById("quit").onclick = home;
+  const scr = document.getElementById("screen");
+  scr.querySelectorAll("[data-act]").forEach(el => el.onclick = ev => { ev.stopPropagation(); act(el.dataset.act); });
+  if (S.hintOn) glow();
+  armIdle();
+  if (["done", "h-done", "c-done"].includes(st.screen)) { S.log.push({ label: st.label, ms: 0, miss: 0 }); setTimeout(finish, 2200); }
+}
+
+function glow() {
+  const st = step(); if (!st.target) return;
+  let sel = st.target === "keypad" ? `[data-act="k-${code()[S.typed.length]}"]` : `[data-act="${st.target}"]`;
+  const el = document.querySelector(`#screen ${sel}`);
+  if (el) el.classList.add("hint-glow");
+}
+
+function showHint(byUser) {
+  const st = step(); if (!st.hint) return;
+  if (!S.hintOn) { S.hints++; }
+  S.hintOn = true;
+  const h = document.getElementById("hint");
+  h.classList.remove("quiet"); h.innerHTML = "💡 " + st.hint;
+  document.getElementById("help").classList.remove("pulse");
+  glow(); say(st.hint);
+  const stats = document.querySelector(".stats"); if (stats) stats.children[1].innerHTML = `도움 <b>${S.hints}</b>`;
+}
+
+// 머뭇거림 감지: 도전 단계는 12초 뒤 자동 도움말, 실전 단계는 20초 뒤 도움 버튼만 깜빡임
+function armIdle() {
+  clearTimeout(idleT);
+  if (S.level === 1 || !step().target) return;
+  idleT = setTimeout(() => {
+    if (S.level === 2) { toast("천천히 하셔도 돼요. 다음에 누를 곳을 알려 드릴게요."); showHint(false); }
+    else document.getElementById("help").classList.add("pulse");
+  }, S.level === 2 ? 12000 : 20000);
+}
+
+function toast(t) {
+  const scr = document.getElementById("screen"); if (!scr) return;
+  scr.querySelectorAll(".toast").forEach(x => x.remove());
+  const d = document.createElement("div"); d.className = "toast"; d.textContent = t; scr.appendChild(d);
+  clearTimeout(toastT); toastT = setTimeout(() => d.remove(), 2400);
+}
+
+function act(a) {
+  const st = step();
+  armIdle();
+  // 메뉴 탐색: 다른 탭을 눌러 보는 것은 실수가 아님
+  if (TABKEY[a] && st.screen === "menu" && a !== st.target) { S.tab = TABKEY[a]; rerenderScreen(); return; }
+  if (a === "k-del" && st.target === "keypad") { S.typed = S.typed.slice(0, -1); rerenderScreen(); return; }
+  if (st.target === "keypad" && a.startsWith("k-")) {
+    const need = code()[S.typed.length];
+    if (a === "k-" + need) { S.typed += need; if (S.typed.length === code().length) advance(); else rerenderScreen(); }
+    else miss(S.id === "civil" ? "번호를 다시 확인해 볼까요? 연습용 번호는 900101-1234567이에요." : "번호를 다시 확인해 볼까요? 미션의 번호는 010-1234-5678이에요.");
+    return;
+  }
+  if (a === st.target) { apply(a); advance(); return; }
+  miss(gentle(a));
+}
+
+function gentle(a) {
+  if (a === "eatin") return "괜찮아요! 이번 미션은 '포장'이에요.";
+  if (a.startsWith("item-")) return "앗, 다른 메뉴예요. 미션의 메뉴를 다시 볼까요?";
+  if (a.startsWith("drink-")) return "음료는 사이다로 바꾸기로 했어요.";
+  if (a === "up-yes" || a === "pt-yes" || a === "sv-do") return "이건 선택 사항이에요. 미션에는 없으니 넘어가도 돼요.";
+  if (a.startsWith("pm-")) return "이번에는 카드로 결제해 볼게요.";
+  if (a === "rc-yes") return "영수증은 받지 않기로 했어요.";
+  if (a.startsWith("d-")) return "무릎·허리·뼈 진료는 정형외과예요.";
+  if (a === "c-chobon") return "초본이 아니라 '등본'이에요. 글자를 한 번 더 확인해 볼까요?";
+  if (a === "addr-yes") return "이번에는 과거 주소 변동 사항을 '미포함'으로 해요.";
+  if (a === "more-yes") return "다른 서류는 필요 없어요.";
+  if (a.startsWith("cpay-")) return "이번에는 카드로 내 볼게요.";
+  return "괜찮아요, 다시 한번 찾아볼까요?";
+}
+
+function miss(msg) {
+  S.mistakes++; S.consec++;
+  S.log[S.i] = S.log[S.i] || { label: step().label, ms: 0, miss: 0 }; S.log[S.i].miss++;
+  toast(msg); say(msg);
+  const stats = document.querySelector(".stats"); if (stats) stats.children[0].innerHTML = `실수 <b>${S.mistakes}</b>`;
+  // 같은 단계에서 두 번 연속 틀리면 도움말을 먼저 보여 줌(도전·실전)
+  if (S.consec >= 2 && !S.hintOn) setTimeout(() => showHint(false), 900);
+}
+
+function apply(a) {
+  if (TABKEY[a]) S.tab = TABKEY[a];
+  if (a === "drink-cider") S.drink = "사이다";
+  if (a === "add") S.cart = 1;
+  if (a === "addr-no") S.addr = "no";
+}
+
+function advance() {
+  const st = step();
+  S.log[S.i] = S.log[S.i] || { label: st.label, ms: 0, miss: 0 };
+  S.log[S.i].ms = Date.now() - S.stepT0;
+  if (st.check !== undefined) S.done.add(st.check);
+  S.i++; S.consec = 0; S.stepT0 = Date.now();
+  S.hintOn = S.level === 1;
+  if (step().screen === "menu" && st.screen !== "menu") S.tab = "추천";
+  render();
+  if (S.level === 1 && step().hint) say(step().hint);
+}
+function rerenderScreen() {
+  document.getElementById("screen").innerHTML = screen(step());
+  document.querySelectorAll("#screen [data-act]").forEach(el => el.onclick = ev => { ev.stopPropagation(); act(el.dataset.act); });
+  if (S.hintOn) glow();
+}
+
+// ===================== 키오스크 화면 =====================
+const won = n => n.toLocaleString() + "원";
+function screen(st) {
+  const s = st.screen;
+  if (s === "attract") return `<div class="body center" data-act="start" style="justify-content:center;cursor:pointer;background:linear-gradient(#FFF7EC,#fff)">
+      <div style="font-size:5em">🍔</div><div style="font-size:1.6em;font-weight:900">오산버거</div>
+      <div style="margin-top:30px;font-size:1.2em;font-weight:700">화면을 터치하면<br>주문이 시작됩니다</div><div style="margin-top:12px;color:var(--muted)">👆</div></div>`;
+  if (s === "where") return `<div class="bar">오산버거 <small>어디에서 드시나요?</small></div><div class="body" style="justify-content:center">
+      <div class="row2"><button class="big-btn" data-act="eatin"><span class="e">🍽️</span>매장에서<br>먹어요</button>
+      <button class="big-btn" data-act="takeout"><span class="e">🛍️</span>포장해<br>갈게요</button></div></div>`;
+  if (s === "menu" || s === "option" || s === "upsell") {
+    const cur = s === "menu" && st.target === "tab-set" ? S.tab : (s === "menu" && st.target === "checkout" ? S.tab : "세트");
+    const tab = s === "menu" ? S.tab : "세트";
+    const tabs = Object.entries(TABKEY).map(([k, v]) => `<button class="tab ${tab === v ? "on" : ""}" data-act="${k}">${v}</button>`).join("");
+    const items = BURGERS[tab].map(([id, e, n, p]) => `<button class="item" data-act="item-${id}"><span class="e">${e}</span><span class="n">${n}</span><span class="p">${won(p)}</span></button>`).join("");
+    let html = `<div class="bar">오산버거 <small>${S.cart ? "포장 · 장바구니 1개" : "포장"}</small></div><div class="body"><div class="tabs">${tabs}</div><div class="items">${items}</div>
+      <div class="cartbar"><div class="sum">${S.cart ? `🛒 불고기버거 세트 (${S.drink}) 1개<br><b>${won(7300)}</b>` : "🛒 장바구니가 비어 있어요"}</div>
+      <button class="primary" data-act="checkout">주문하기 ${S.cart ? "(1)" : ""}</button></div></div>`;
+    if (s === "option") html += `<div class="modal"><div class="sheet"><h4>🍔🍟 불고기버거 세트 · ${won(7300)}</h4>
+      <div>사이드</div><div class="opts"><button class="opt on" data-act="side-fries">감자튀김</button><button class="opt" data-act="side-cheese">치즈스틱 +500</button><button class="opt" data-act="side-salad">샐러드 +800</button></div>
+      <div>음료</div><div class="opts"><button class="opt ${S.drink === "콜라" ? "on" : ""}" data-act="drink-cola">콜라</button><button class="opt ${S.drink === "사이다" ? "on" : ""}" data-act="drink-cider">사이다</button><button class="opt" data-act="drink-zero">제로콜라</button></div>
+      <div class="row2"><button class="ghost" data-act="cancel">취소</button><button class="primary alt" data-act="add">담기</button></div></div></div>`;
+    if (s === "upsell") html += `<div class="modal"><div class="sheet center"><h4>🔥 라지 세트로 업그레이드!</h4><div>감자튀김과 음료를 크게 바꿔 보세요<br><b>+700원</b></div>
+      <div class="row2"><button class="ghost" data-act="up-no">아니요</button><button class="primary" data-act="up-yes">업그레이드</button></div></div></div>`;
+    return html;
+  }
+  if (s === "confirm") return `<div class="bar">주문 확인 <small>포장</small></div><div class="body"><div class="list">🍔🍟 불고기버거 세트 × 1<br>&nbsp;&nbsp;· 감자튀김 · ${S.drink}<br><b>합계 ${won(7300)}</b></div>
+      <div class="row2" style="margin-top:auto"><button class="ghost" data-act="back">이전</button><button class="primary" data-act="pay">결제하기</button></div></div>`;
+  if (s === "point") return `<div class="bar">결제</div><div class="body"></div><div class="modal"><div class="sheet center"><h4>⭐ 포인트를 적립하시겠어요?</h4><div>휴대폰 번호로 적립할 수 있어요</div>
+      <div class="row2"><button class="ghost" data-act="pt-no">적립 안 함</button><button class="primary alt" data-act="pt-yes">적립하기</button></div></div></div>`;
+  if (s === "paymethod") return `<div class="bar">결제 방법 선택 <small>${won(7300)}</small></div><div class="body">
+      <button class="big-btn" data-act="pm-card"><span class="e">💳</span>신용·체크카드</button>
+      <div class="row2"><button class="big-btn" data-act="pm-pay"><span class="e">📱</span>간편결제</button><button class="big-btn" data-act="pm-coupon"><span class="e">🎟️</span>쿠폰</button></div></div>`;
+  if (s === "insert") return `<div class="bar">카드 결제 <small>${won(7300)}</small></div><div class="body center" style="justify-content:center">
+      <div style="font-weight:800;font-size:1.2em">카드를 아래 투입구에<br>끝까지 꽂아 주세요</div><button class="cardslot" data-act="insert">💳</button><div style="color:var(--muted)">⬇ 키오스크 아래 카드 투입구</div></div>`;
+  if (s === "receipt") return `<div class="bar">결제 완료</div><div class="body center" style="justify-content:center"><div style="font-size:3em">✅</div><div style="font-weight:800;font-size:1.2em">결제가 완료되었어요.<br>영수증을 출력할까요?</div>
+      <div class="row2"><button class="ghost" data-act="rc-no">출력 안 함</button><button class="primary alt" data-act="rc-yes">출력</button></div></div>`;
+  if (s === "done") return `<div class="bar">주문 완료</div><div class="body center" style="justify-content:center"><div>주문 번호</div><div class="huge">127</div><div>번호가 불리면 카운터에서 받아 가세요 🛍️</div></div>`;
+  // ---- 병원 ----
+  if (s === "h-home") return `<div class="bar">🏥 오산 가정의원 <small>무인 접수기</small></div><div class="body">
+      <button class="big-btn" data-act="h-reg"><span class="e">📝</span>접수</button>
+      <div class="row2"><button class="big-btn" data-act="h-pay"><span class="e">💳</span>수납</button><button class="big-btn" data-act="h-rx"><span class="e">🧾</span>처방전 출력</button></div></div>`;
+  if (s === "h-type") return `<div class="bar">접수 <small>1/4</small></div><div class="body" style="justify-content:center"><div class="center" style="font-weight:800">이 병원에 와 보신 적이 있나요?</div>
+      <div class="row2"><button class="big-btn" data-act="h-first"><span class="e">🆕</span>처음 왔어요<br><small>(초진)</small></button><button class="big-btn" data-act="h-revisit"><span class="e">🔁</span>다시 왔어요<br><small>(재진)</small></button></div></div>`;
+  if (s === "h-id") return `<div class="bar">본인 확인 <small>2/4</small></div><div class="body" style="justify-content:center">
+      <button class="big-btn" data-act="h-phone"><span class="e">📱</span>휴대폰 번호로 확인</button><button class="big-btn" data-act="h-rrn"><span class="e">🪪</span>주민등록번호로 확인</button></div>`;
+  if (s === "h-keypad") {
+    const t = S.typed, f = t.length > 7 ? `${t.slice(0, 3)}-${t.slice(3, 7)}-${t.slice(7)}` : t.length > 3 ? `${t.slice(0, 3)}-${t.slice(3)}` : t;
+    return `<div class="bar">휴대폰 번호 입력 <small>2/4</small></div><div class="body"><div class="phone">${f || "<span style='color:#B9B3A6'>번호를 눌러 주세요</span>"}</div>
+      <div class="keypad">${[1, 2, 3, 4, 5, 6, 7, 8, 9].map(n => `<button class="key" data-act="k-${n}">${n}</button>`).join("")}
+      <button class="key" data-act="k-del" style="font-size:.9em">지우기</button><button class="key" data-act="k-0">0</button><button class="key" data-act="h-ok" style="background:var(--brand);color:#fff;font-size:.9em">확인</button></div></div>`;
+  }
+  if (s === "h-survey") return `<div class="bar">문진</div><div class="body"></div><div class="modal"><div class="sheet center"><h4>📋 문진표를 작성하시겠어요?</h4><div>(선택) 오늘 증상을 미리 적을 수 있어요</div>
+      <div class="row2"><button class="ghost" data-act="sv-skip">건너뛰기</button><button class="primary alt" data-act="sv-do">작성하기</button></div></div></div>`;
+  if (s === "h-dept") return `<div class="bar">진료과 선택 <small>3/4</small></div><div class="body"><div class="items">
+      <button class="item" data-act="d-im"><span class="e">🩺</span><span class="n">내과</span><span class="p">감기·배탈·혈압</span></button>
+      <button class="item" data-act="d-ortho"><span class="e">🦴</span><span class="n">정형외과</span><span class="p">무릎·허리·뼈</span></button>
+      <button class="item" data-act="d-ent"><span class="e">👂</span><span class="n">이비인후과</span><span class="p">귀·코·목</span></button>
+      <button class="item" data-act="d-ped"><span class="e">🧸</span><span class="n">소아청소년과</span><span class="p">어린이</span></button></div></div>`;
+  if (s === "h-confirm") return `<div class="bar">접수 확인 <small>4/4</small></div><div class="body"><div class="list">구분: 재진<br>본인 확인: 010-1234-5678<br>진료과: <b>정형외과</b></div>
+      <div class="row2" style="margin-top:auto"><button class="ghost" data-act="back">이전</button><button class="primary alt" data-act="h-submit">접수하기</button></div></div>`;
+  if (s === "h-done") return `<div class="bar">접수 완료</div><div class="body center" style="justify-content:center"><div>대기 번호</div><div class="huge">8</div><div>정형외과 앞에서 기다려 주세요. 앞에 3명이 있어요.</div></div>`;
+  // ---- 무인민원발급기 ----
+  if (s === "c-home") return `<div class="bar">🏛️ 무인민원발급기 <small>원하는 민원을 고르세요</small></div><div class="body">
+      <button class="big-btn" data-act="c-resident"><span class="e">🪪</span>주민등록</button>
+      <div class="row2"><button class="big-btn" data-act="c-family"><span class="e">👪</span>가족관계등록</button><button class="big-btn" data-act="c-land"><span class="e">🏠</span>토지·건축물</button></div>
+      <div class="row2"><button class="big-btn" data-act="c-tax"><span class="e">🧾</span>지방세</button><button class="big-btn" data-act="c-etc"><span class="e">📄</span>기타 민원</button></div></div>`;
+  if (s === "c-kind") return `<div class="bar">주민등록 <small>서류를 고르세요</small></div><div class="body">
+      <button class="big-btn" data-act="c-deungbon"><span class="e">📃</span>주민등록표 <u>등본</u><br><small style="font-weight:500">같이 사는 가족(세대원)이 나와요</small></button>
+      <button class="big-btn" data-act="c-chobon"><span class="e">📜</span>주민등록표 <u>초본</u><br><small style="font-weight:500">본인의 주소 이력이 나와요</small></button>
+      <button class="big-btn" data-act="c-view"><span class="e">🔎</span>전입세대 열람</button></div>`;
+  if (s === "c-rrn") {
+    const t = S.typed, f = t.length > 6 ? `${t.slice(0, 6)}-${t[6]}${"*".repeat(t.length - 7)}` : t;
+    return `<div class="bar">본인 확인 <small>주민등록번호</small></div><div class="body"><div class="center" style="font-weight:700">주민등록번호 13자리를 눌러 주세요</div>
+      <div class="phone">${f || "<span style='color:#B9B3A6'>______-_______</span>"}</div>
+      <div class="keypad">${[1, 2, 3, 4, 5, 6, 7, 8, 9].map(n => `<button class="key" data-act="k-${n}">${n}</button>`).join("")}
+      <button class="key" data-act="k-del" style="font-size:.9em">지우기</button><button class="key" data-act="k-0">0</button><button class="key" data-act="c-ok" style="background:var(--brand);color:#fff;font-size:.9em">확인</button></div>
+      <div class="center" style="color:var(--muted);font-size:.85em">🔒 뒷자리는 *로 가려져요 · 연습용 번호예요</div></div>`;
+  }
+  if (s === "c-finger") return `<div class="bar">본인 확인 <small>지문 인식</small></div><div class="body center" style="justify-content:center">
+      <div style="font-weight:800;font-size:1.2em">아래 지문 인식기에<br>오른손 엄지를 올려 주세요</div>
+      <button class="cardslot" data-act="finger" style="border-radius:50%;width:170px;height:170px">👆</button>
+      <div style="color:var(--muted)">손가락을 꾹 누르고 2초 정도 기다려요</div></div>`;
+  if (s === "c-option") {
+    const sel = S.addr;
+    return `<div class="bar">주민등록표 등본 <small>발급 내용</small></div><div class="body">
+      <div class="list">과거의 주소 변동 사항<div class="row2" style="margin-top:8px"><button class="opt ${sel === "yes" ? "on" : ""}" data-act="addr-yes">포함</button><button class="opt ${sel === "no" ? "on" : ""}" data-act="addr-no">미포함</button></div></div>
+      <div class="list">세대원 정보<div class="row2" style="margin-top:8px"><button class="opt on" data-act="mem-yes">포함</button><button class="opt" data-act="mem-no">미포함</button></div></div>
+      <div class="list" style="display:flex;justify-content:space-between;align-items:center">발급 부수 <b>1통</b></div>
+      <div class="row2" style="margin-top:auto"><button class="ghost" data-act="back">이전</button><button class="primary alt" data-act="c-next">다음</button></div></div>`;
+  }
+  if (s === "c-more") return `<div class="bar">주민등록표 등본</div><div class="body"></div><div class="modal"><div class="sheet center"><h4>📄 다른 민원도 함께 발급하시겠어요?</h4><div>초본·가족관계증명서 등을 이어서 뗄 수 있어요</div>
+      <div class="row2"><button class="ghost" data-act="more-no">아니요</button><button class="primary alt" data-act="more-yes">추가 발급</button></div></div></div>`;
+  if (s === "c-pay") return `<div class="bar">수수료 결제 <small>200원 (연습용 금액)</small></div><div class="body" style="justify-content:center">
+      <div class="row2"><button class="big-btn" data-act="cpay-cash"><span class="e">💵</span>현금</button><button class="big-btn" data-act="cpay-card"><span class="e">💳</span>카드</button></div></div>`;
+  if (s === "c-insert") return `<div class="bar">카드 결제 <small>200원</small></div><div class="body center" style="justify-content:center">
+      <div style="font-weight:800;font-size:1.2em">카드를 투입구에<br>끝까지 꽂아 주세요</div><button class="cardslot" data-act="c-insert">💳</button></div>`;
+  if (s === "c-done") return `<div class="bar">발급 완료</div><div class="body center" style="justify-content:center"><div style="font-size:3em">🖨️</div>
+      <div style="font-weight:800;font-size:1.2em">등본이 출력되고 있어요</div><div>아래 출력구에서 서류를 꼭 챙겨 가세요.<br>카드도 잊지 마세요!</div></div>`;
+  return "";
+}
+
+// ===================== 결과 =====================
+function finish() {
+  clearTimers();
+  const sec = Math.round((Date.now() - S.t0) / 1000);
+  const stars = S.mistakes === 0 && S.hints === 0 ? 3 : S.mistakes <= 2 && S.hints <= 1 ? 2 : 1;
+  const stuck = S.log.filter(l => l && (l.miss > 0 || l.ms > 15000)).sort((a, b) => b.miss - a.miss || b.ms - a.ms).slice(0, 3);
+  // 다음 단계 추천: 별 3개면 한 단계 올리고, 1개면 한 단계 내림
+  const next = stars === 3 ? Math.min(3, S.level + 1) : stars === 1 ? Math.max(1, S.level - 1) : S.level;
+  const prog = store.get();
+  const best = prog[S.id];
+  if (!best || S.level > best.level || (S.level === best.level && stars > best.stars)) { prog[S.id] = { level: S.level, stars }; store.set(prog); }
+  const msg = stars === 3 ? "완벽해요! 혼자서도 충분히 하실 수 있어요." : stars === 2 ? "잘하셨어요! 한 번만 더 하면 익숙해질 거예요." : "끝까지 해내셨어요! 연습하면 점점 쉬워져요.";
+  app.innerHTML = `<div class="result">
+    <div class="center"><div class="stars">${"★".repeat(stars)}${"☆".repeat(3 - stars)}</div><h2 style="margin:6px 0">${S.sc.title} · ${LEVELS[S.level - 1].name} 단계 완료</h2><div>${msg}</div></div>
+    <div class="grid3"><div><b>${Math.floor(sec / 60)}분 ${sec % 60}초</b>걸린 시간</div><div><b>${S.mistakes}번</b>다시 찾은 횟수</div><div><b>${S.hints}번</b>도움 받은 횟수</div></div>
+    <div class="stuck">${stuck.length ? `<b>조금 어려웠던 곳</b><br>${stuck.map(l => `· ${l.label} ${l.miss ? `(다시 찾음 ${l.miss}번)` : ""}${l.ms > 15000 ? ` (${Math.round(l.ms / 1000)}초 고민)` : ""}`).join("<br>")}` : "<b>막힌 곳 없이 끝까지 진행했어요.</b>"}
+      <br><br>👉 다음 추천: <b>${LEVELS[next - 1].name} 단계</b> ${next > S.level ? "(한 단계 올려 볼까요?)" : next < S.level ? "(조금 쉬운 단계로 한 번 더)" : "(같은 단계로 한 번 더)"}</div>
+    <div class="actions"><button class="primary alt" id="rNext">${LEVELS[next - 1].name} 단계 하기</button><button class="ghost" id="rAgain">같은 단계 다시</button><button class="ghost" id="rHome">다른 키오스크 고르기</button></div>
+  </div>`;
+  say(msg);
+  document.getElementById("rNext").onclick = () => start(S.id, next);
+  document.getElementById("rAgain").onclick = () => start(S.id, S.level);
+  document.getElementById("rHome").onclick = home;
+}
+
+// 장면 바로 열기(캡처·시연용): index.html#s=burger&l=3&k=7&m=1&mute=1
+//   s=시나리오, l=단계, k=진행할 단계 수(99면 결과 화면), m=1이면 중간에 실수 2번·도움 1번을 넣음
+function fromHash() {
+  const q = new URLSearchParams(location.hash.slice(1));
+  if (q.get("mute") === "1") { voice = false; const t = document.getElementById("tVoice"); t.classList.remove("on"); t.textContent = "음성 안내 꺼짐"; }
+  if (q.get("big") === "1") document.getElementById("tBig").click();
+  const id = q.get("s"); if (!id || !SCENARIOS[id] || SCENARIOS[id].soon) return home();
+  start(id, +(q.get("l") || 1));
+  const k = +(q.get("k") || 0), m = q.get("m") === "1";
+  for (let n = 0; n < k && step().target; n++) {
+    const st = step();
+    if (m && n === 2) { const w = [...document.querySelectorAll("#screen [data-act]")].find(e => e.dataset.act !== st.target && !TABKEY[e.dataset.act]); if (w) { act(w.dataset.act); act(w.dataset.act); } S.stepT0 -= 21000; S.t0 -= 192000; }
+    if (st.target === "keypad") { while (S.typed.length < code().length) act("k-" + code()[S.typed.length]); }
+    else act(st.target);
+  }
+}
+fromHash();
+</script>
+</body>
+</html>
